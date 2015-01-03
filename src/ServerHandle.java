@@ -18,6 +18,8 @@ public class ServerHandle extends Thread {
 	private String userName;
 	private Server server;
 	private String[] commands;
+	private String answer;
+	
 	
 
 	public ServerHandle(Socket clientSocket, String userName,Server server) {
@@ -43,14 +45,26 @@ public class ServerHandle extends Thread {
 		while (isServerRunning) {
 			try {
 				msgFromClient = inFromClient.readLine();
+				System.out.println(msgFromClient);
                 commands = msgFromClient.split(" ");
                 
 				if(commands[0].equals("quit")){
 					server.removeClient(userName);
 				}
 				if(commands[0].equals("play")){
-					System.out.println("play " + commands[1]);
-					server.SendMassageToUser(server.getUser(commands[1],userName));			
+					server.SendMassageToUser(server.getTwoUser(commands[1],userName));			
+				}
+				
+				if(commands[0].equals("accepted")){
+					server.StartGame(commands[1], commands[2]);	
+				}
+				
+				if(commands[0].equals("answer")){
+					answer = commands[1];
+					server.chechAnswer(userName,answer);
+				}
+				if(commands[0].equals("leaves")){
+					server.leavesGame(userName);
 				}
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -63,6 +77,10 @@ public class ServerHandle extends Thread {
 	public void uppdateUser(){
 		outToClient.println("userList " + server.getAllUser());
 		outToClient.flush();
+	}
+	
+	public String getAnswer(){
+		return answer;
 	}
 	
 	public void closeConnection(){
@@ -80,4 +98,34 @@ public class ServerHandle extends Thread {
 		outToClient.println("request " + sendToUser);
 		outToClient.flush();
 	}
+	
+	public void leavesGame(String sendToUser){
+		System.out.println("Leavses " + sendToUser);
+		outToClient.println("leavesGame" + " " + sendToUser);
+		outToClient.flush();
+	}
+	
+	public void sendQuestion(String question){
+		outToClient.println("question" + " " + question);
+		outToClient.flush();
+	}
+	
+	public String getUserName(){
+		return userName;
+	}
+	
+	public void isWinner(String msg){
+		outToClient.println("winner" + " " + msg);
+		outToClient.flush();
+	}
+	public void isLoser(String msg){
+		outToClient.println("loser" + " " + msg);
+		outToClient.flush();
+	}
+	
+	public void samePoint(String msg){
+		outToClient.println("samePoint" + " " + msg);
+		outToClient.flush();
+	}
+
 }

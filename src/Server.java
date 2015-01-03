@@ -18,7 +18,13 @@ public class Server{
     private String userName;
     private ServerHandle client;
     private String sendToUser;
-	private HashMap<String,ServerHandle> list = new HashMap<String,ServerHandle>();
+    
+    //List off all uesr
+	private HashMap<String,ServerHandle> userList = new HashMap<String,ServerHandle>();
+	
+	//List of two players play togheter
+	private HashMap<String,PairGame> pairGameList = new HashMap<String,PairGame>();
+
 
 	public Server(ServerHandle serverHandle){
 		this.client = serverHandle;
@@ -29,7 +35,7 @@ public class Server{
 
 	
 	public static void main(String[] args) throws IOException{
-		port = "63403";		
+		port = "63403";
 		Server server = new Server();		
 		server.start();
 	}
@@ -48,7 +54,7 @@ public class Server{
 	                userName = bufferedReaderFrom.readLine().toString();
 	                System.out.println(userName);
 	                client = new ServerHandle(clientSocket,userName,this);
-					list.put(userName, client);			
+	                userList.put(userName, client);			
 					client.start();
 				}
 		} catch (EOFException e) {
@@ -57,46 +63,117 @@ public class Server{
 	}
 	
 	public void removeClient(String userName){
-
-			System.out.println("removing");
-			list.get(userName).closeConnection();
-			list.remove(userName);
-			System.out.println(list.size());
-			System.out.println("Removed " + userName);
+			userList.get(userName).closeConnection();
+			userList.remove(userName);
 			massageUserToUpdate();
 	}
 	
+	//Retuen all users of userList to update ListView on client (Android)
 	public String getAllUser(){
 		StringBuilder st = new StringBuilder();
-		for ( String key : list.keySet() ) {
+		for ( String key : userList.keySet() ) {
 			st.append(key + " ");
 		}
-		System.out.println(st.toString());
 		return st.toString();
 	}
 	
+	//Send msg to client to uppdate listView if some user has leaves / connected to server
 	public void massageUserToUpdate(){
-		System.out.println(list.size());
-		for ( String key : list.keySet() ) {
-		   list.get(key).uppdateUser();		    
+		for ( String key : userList.keySet() ) {
+			userList.get(key).uppdateUser();		    
 		}
 	}
 	
-	public ServerHandle getUser(String userName,String sendToUser){
+	/*
+	 * Tow parameters
+	 * userName : user has send request
+	 *  sendToUser : user has resive request
+	 * */
+	public ServerHandle getTwoUser(String userName,String sendToUser){
 		this.sendToUser = sendToUser;
 		ServerHandle user = null;
-		for ( String key : list.keySet() ) {
+		for ( String key : userList.keySet() ) {
 			   if(key.equals(userName)){
-				   user = list.get(key);
+				   user = userList.get(key);
 				   return user;
 			   }		    
 			}
-		return user;
-		
+		return user;		
 	}
 	
+	//Send request to user (sendToUser) from getTwoUser method
 	public void SendMassageToUser(ServerHandle user){
 		user.sendMassageToUser(sendToUser);
+	}
+	
+	//Return one user
+	public ServerHandle getUser(String userName){
+		ServerHandle user = null;
+		for ( String key : userList.keySet() ) {
+			   if(key.equals(userName)){
+				   user = userList.get(key);
+				   return user;
+			   }		    
+			}
+		return user;		
+	}
+	
+
+	
+	public void StartGame(String userOne, String userTow){
+		PairGame pairGame = new PairGame(getUser(userOne), getUser(userTow));
+		String key = userOne.concat(" " + userTow);
+		pairGameList.put(key, pairGame);
+		pairGame.sendQuestionToClient();
+	}
+	
+	/*
+	 * username the user has leaves the game
+	 * send massage to other user 
+	 * */
+	public void leavesGame(String userName){
+		for ( String key : pairGameList.keySet() ) {
+			String[] keys = key.split(" ");
+			
+		   if(keys[0].equals(userName)){
+			   PairGame gm = pairGameList.get(key);
+			   gm.leavesGame(keys[1]);
+			   pairGameList.remove(key);
+		   }else if(keys[1].equals(userName)){
+			   PairGame gm = pairGameList.get(key);
+			   gm.leavesGame(keys[0].toString());
+			   pairGameList.remove(key);
+		   }		    
+		}
+	}
+	
+	/*
+	 * check the answer form userName and check if two users has answered the question (gm.ifAllUserHasAnswered)
+	 * 
+	 * */
+	public void chechAnswer(String userName , String answer){
+		for ( String key : pairGameList.keySet() ) {
+			String[] keys = key.split(" ");
+			System.out.println("keyyys[0] " + keys[0]);
+			
+		   if(keys[0].equals(userName)){
+			   PairGame gm = pairGameList.get(key);
+			   gm.setUserOneAnswer(answer);
+
+			   if((gm.ifAllUserHasAnswered())){
+				   gm.chechAnsewr();
+				   break;
+			   }
+		   }if(keys[1].equals(userName)){
+			   PairGame gm = pairGameList.get(key);
+			   System.out.println("GGMMM "+ gm);
+			   gm.setUserTowAnswer(answer);
+			   if((gm.ifAllUserHasAnswered())){
+				   gm.chechAnsewr();
+				   break;
+			   }
+		   }		    
+		}
 	}
 }
 

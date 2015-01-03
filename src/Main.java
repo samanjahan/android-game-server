@@ -30,7 +30,7 @@ public class Main {
         port = "63403";
 
 		   
-	   System.out.print("\nip:");
+	   System.out.print("\nEnter you name:");
 	   ip = "localhost";	   
 	   OutputStream outToServer = null;
         
